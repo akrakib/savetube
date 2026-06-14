@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SaveTube – YouTube Video Downloader</title>
+  <meta name="description" content="YouTube থেকে ফ্রি ভিডিও ডাউনলোড করো। MP4, MP3, HD সাপোর্ট।">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --red: #e74c3c;
+      --red-dark: #c0392b;
+      --bg: #0f0f0f;
+      --bg2: #1a1a1a;
+      --bg3: #242424;
+      --border: #2e2e2e;
+      --text: #f1f1f1;
+      --muted: #888;
+      --radius: 12px;
+    }
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    nav {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1rem 2rem; border-bottom: 1px solid var(--border);
+      background: var(--bg2); position: sticky; top: 0; z-index: 100;
+    }
+    .logo { display: flex; align-items: center; gap: 10px; font-size: 20px; font-weight: 700; color: var(--text); text-decoration: none; }
+    .logo-icon { width: 34px; height: 34px; background: var(--red); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+    .logo span { color: var(--red); }
+    .badge { background: #1a3a1a; color: #4caf50; font-size: 11px; padding: 4px 10px; border-radius: 20px; font-weight: 600; }
+
+    .hero { text-align: center; padding: 4rem 1rem 2rem; }
+    .hero h1 { font-size: clamp(22px, 4vw, 40px); font-weight: 700; margin-bottom: 10px; line-height: 1.3; }
+    .hero h1 span { color: var(--red); }
+    .hero p { color: var(--muted); font-size: 15px; margin-bottom: 2rem; }
+
+    .search-box {
+      display: flex; max-width: 680px; margin: 0 auto 1rem;
+      gap: 10px; background: var(--bg2); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 6px 6px 6px 16px;
+    }
+    .search-box input { flex: 1; background: none; border: none; color: var(--text); font-size: 15px; outline: none; }
+    .search-box input::placeholder { color: var(--muted); }
+
+    .btn {
+      background: var(--red); color: white; border: none;
+      padding: 10px 22px; border-radius: 8px; font-size: 15px;
+      font-weight: 600; cursor: pointer; transition: background 0.2s, transform 0.1s;
+      display: flex; align-items: center; gap: 6px; white-space: nowrap;
+    }
+    .btn:hover { background: var(--red-dark); }
+    .btn:active { transform: scale(0.97); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    .supported { color: var(--muted); font-size: 13px; margin-top: 8px; }
+
+    .loader { display: none; text-align: center; padding: 2rem; color: var(--muted); }
+    .spinner { width: 36px; height: 36px; border: 3px solid var(--border); border-top-color: var(--red); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 12px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .error-box { display: none; background: #2a1010; border: 1px solid #5a2020; border-radius: var(--radius); padding: 14px 18px; color: #f87171; font-size: 14px; max-width: 680px; margin: 0 auto 1rem; }
+
+    #result-section { display: none; max-width: 680px; margin: 0 auto 2rem; padding: 0 1rem; }
+
+    .result-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+    .result-top { display: flex; gap: 14px; padding: 16px; border-bottom: 1px solid var(--border); }
+    .thumb-wrap { flex-shrink: 0; width: 130px; height: 80px; border-radius: 8px; overflow: hidden; background: var(--bg3); }
+    .thumb-wrap img { width: 100%; height: 100%; object-fit: cover; }
+    .video-meta { flex: 1; min-width: 0; }
+    .video-meta h3 { font-size: 14px; font-weight: 600; margin-bottom: 8px; line-height: 1.5; }
+    .meta-row { display: flex; gap: 12px; flex-wrap: wrap; }
+    .meta-item { font-size: 12px; color: var(--muted); }
+
+    .formats-area { padding: 16px; }
+    .formats-area h4 { font-size: 13px; color: var(--muted); margin-bottom: 12px; }
+
+    .format-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; margin-bottom: 16px; }
+    .fmt-btn {
+      background: var(--bg3); border: 1px solid var(--border); color: var(--text);
+      padding: 10px 8px; border-radius: 8px; font-size: 13px; cursor: pointer;
+      transition: all 0.15s; text-align: center;
+    }
+    .fmt-btn:hover { border-color: var(--red); color: var(--red); }
+    .fmt-btn.selected { background: var(--red); border-color: var(--red); color: white; }
+    .fmt-label { font-weight: 600; }
+    .fmt-type { font-size: 11px; opacity: 0.75; margin-top: 3px; }
+
+    #dl-btn { width: 100%; justify-content: center; font-size: 15px; padding: 13px; border-radius: 10px; }
+
+    .features { max-width: 800px; margin: 2rem auto; padding: 0 1rem; }
+    .features h2 { text-align: center; font-size: 20px; margin-bottom: 1.5rem; color: var(--muted); font-weight: 500; }
+    .feat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+    .feat-item { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 16px; text-align: center; }
+    .feat-item .icon { font-size: 26px; margin-bottom: 8px; }
+    .feat-item h3 { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+    .feat-item p { font-size: 12px; color: var(--muted); }
+
+    .howto { max-width: 680px; margin: 2rem auto; padding: 0 1rem; }
+    .howto h2 { text-align: center; font-size: 20px; margin-bottom: 1.5rem; }
+    .steps { display: flex; flex-direction: column; gap: 10px; }
+    .step { display: flex; align-items: flex-start; gap: 14px; background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; }
+    .step-num { width: 30px; height: 30px; background: var(--red); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex-shrink: 0; }
+    .step-text h4 { font-size: 14px; font-weight: 600; margin-bottom: 3px; }
+    .step-text p { font-size: 13px; color: var(--muted); }
+
+    footer { text-align: center; padding: 2rem 1rem; color: var(--muted); font-size: 13px; border-top: 1px solid var(--border); margin-top: 3rem; }
+
+    @media (max-width: 600px) {
+      nav { padding: 1rem; }
+      .search-box { flex-direction: column; padding: 10px; }
+      .btn { width: 100%; justify-content: center; }
+      .result-top { flex-direction: column; }
+      .thumb-wrap { width: 100%; height: 180px; }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a class="logo" href="#">
+    <div class="logo-icon">⬇</div>
+    Save<span>Tube</span>
+  </a>
+  <span class="badge">✓ 100% Free</span>
+</nav>
+
+<div class="hero">
+  <h1>YouTube থেকে ভিডিও <span>ডাউনলোড করো</span></h1>
+  <p>MP4, MP3, HD — সব format ফ্রি। কোনো registration লাগবে না।</p>
+
+  <div class="search-box">
+    <input type="text" id="url-input" placeholder="YouTube লিংক এখানে paste করো..." />
+    <button class="btn" id="fetch-btn" onclick="fetchInfo()">⬇ Download</button>
+  </div>
+  <p class="supported">🎬 YouTube সাপোর্টেড</p>
+</div>
+
+<div style="max-width:680px; margin: 0 auto; padding: 0 1rem;">
+  <div class="loader" id="loader">
+    <div class="spinner"></div>
+    <p>Video info আনা হচ্ছে...</p>
+  </div>
+  <div class="error-box" id="error-box"></div>
+</div>
+
+<div id="result-section">
+  <div class="result-card">
+    <div class="result-top">
+      <div class="thumb-wrap">
+        <img id="thumb" src="" alt="thumbnail" onerror="this.style.display='none'" />
+      </div>
+      <div class="video-meta">
+        <h3 id="vid-title">—</h3>
+        <div class="meta-row">
+          <span class="meta-item">⏱ <span id="vid-duration">—</span></span>
+        </div>
+      </div>
+    </div>
+    <div class="formats-area">
+      <h4>Format ও quality বেছে নাও:</h4>
+      <div class="format-grid" id="format-grid"></div>
+      <button class="btn" id="dl-btn" onclick="startDownload()" disabled>⬇ ডাউনলোড শুরু করো</button>
+    </div>
+  </div>
+</div>
+
+<div class="features">
+  <h2>কেন SaveTube ব্যবহার করবে?</h2>
+  <div class="feat-grid">
+    <div class="feat-item"><div class="icon">⚡</div><h3>Super Fast</h3><p>সেকেন্ডে download শুরু</p></div>
+    <div class="feat-item"><div class="icon">🔓</div><h3>No Login</h3><p>কোনো account লাগবে না</p></div>
+    <div class="feat-item"><div class="icon">📱</div><h3>Mobile Ready</h3><p>Phone থেকেও কাজ করে</p></div>
+    <div class="feat-item"><div class="icon">🎵</div><h3>MP3 Extract</h3><p>শুধু audio বের করো</p></div>
+    <div class="feat-item"><div class="icon">🛡️</div><h3>100% Safe</h3><p>কোনো virus নেই</p></div>
+    <div class="feat-item"><div class="icon">🎬</div><h3>HD Support</h3><p>High quality ডাউনলোড</p></div>
+  </div>
+</div>
+
+<div class="howto">
+  <h2>কিভাবে ব্যবহার করবে?</h2>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-text"><h4>লিংক কপি করো</h4><p>YouTube থেকে ভিডিওর URL কপি করো</p></div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-text"><h4>এখানে পেস্ট করো</h4><p>উপরের box এ paste করে Download চাপো</p></div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-text"><h4>Format বেছে ডাউনলোড করো</h4><p>MP4 বা MP3 বেছে নিয়ে ডাউনলোড করো</p></div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <p>© 2025 SaveTube — Personal use only. Respect copyright.</p>
+</footer>
+
+<script>
+  const RAPIDAPI_KEY = 'f50cc67c40mshf59350fc3bebc5ep195966jsn67d34925e9d7';
+  const RAPIDAPI_HOST = 'youtube-media-downloader.p.rapidapi.com';
+
+  let selectedFormat = null;
+  let currentUrl = '';
+
+  function extractVideoId(url) {
+    const patterns = [
+      /(?:v=|\/embed\/|\/shorts\/|youtu\.be\/)([a-zA-Z0-9_-]{11})/,
+    ];
+    for (const p of patterns) {
+      const m = url.match(p);
+      if (m) return m[1];
+    }
+    return null;
+  }
+
+  function showError(msg) {
+    const box = document.getElementById('error-box');
+    box.innerHTML = '⚠️ ' + msg;
+    box.style.display = 'block';
+  }
+
+  function hideError() {
+    document.getElementById('error-box').style.display = 'none';
+  }
+
+  function showLoader(show) {
+    document.getElementById('loader').style.display = show ? 'block' : 'none';
+  }
+
+  function formatDuration(sec) {
+    if (!sec) return '—';
+    const h = Math.floor(sec / 3600);
+    const m = Math.floor((sec % 3600) / 60);
+    const s = sec % 60;
+    if (h > 0) return `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    return `${m}:${String(s).padStart(2,'0')}`;
+  }
+
+  async function fetchInfo() {
+    const url = document.getElementById('url-input').value.trim();
+    if (!url) { showError('একটা YouTube URL দাও!'); return; }
+
+    const videoId = extractVideoId(url);
+    if (!videoId) { showError('Valid YouTube URL দাও! যেমন: https://youtube.com/watch?v=xxxxx'); return; }
+
+    currentUrl = url;
+    hideError();
+    showLoader(true);
+    document.getElementById('result-section').style.display = 'none';
+    document.getElementById('fetch-btn').disabled = true;
+
+    try {
+      const res = await fetch(`https://youtube-media-downloader.p.rapidapi.com/v2/video/details?videoId=${videoId}`, {
+        method: 'GET',
+        headers: {
+          'x-rapidapi-key': RAPIDAPI_KEY,
+          'x-rapidapi-host': RAPIDAPI_HOST
+        }
+      });
+
+      const data = await res.json();
+
+      if (!data || data.errorId !== 'Success') {
+        showError('Video খুঁজে পাওয়া যায়নি। অন্য লিংক দিয়ে চেষ্টা করো।');
+        return;
+      }
+
+      document.getElementById('thumb').src = data.thumbnails?.[0]?.url || '';
+      document.getElementById('vid-title').textContent = data.title || 'Unknown';
+      document.getElementById('vid-duration').textContent = formatDuration(data.lengthSeconds);
+
+      const grid = document.getElementById('format-grid');
+      grid.innerHTML = '';
+      selectedFormat = null;
+      document.getElementById('dl-btn').disabled = true;
+
+      const formats = [];
+
+      // Video formats
+      if (data.videos?.items) {
+        data.videos.items.forEach(f => {
+          if (f.url && f.quality) {
+            formats.push({
+              url: f.url,
+              label: f.quality,
+              type: 'video',
+              ext: f.extension || 'mp4'
+            });
+          }
+        });
+      }
+
+      // Audio formats
+      if (data.audios?.items) {
+        data.audios.items.slice(0, 2).forEach(f => {
+          if (f.url) {
+            formats.push({
+              url: f.url,
+              label: f.quality || 'Audio',
+              type: 'audio',
+              ext: f.extension || 'mp3'
+            });
+          }
+        });
+      }
+
+      if (formats.length === 0) {
+        showError('এই video র কোনো downloadable format পাওয়া যায়নি।');
+        return;
+      }
+
+      formats.forEach((f, i) => {
+        const btn = document.createElement('button');
+        btn.className = 'fmt-btn' + (i === 0 ? ' selected' : '');
+        btn.innerHTML = `
+          <div class="fmt-label">${f.label}</div>
+          <div class="fmt-type">${f.type === 'audio' ? '🎵 Audio' : '🎬 Video'} · ${f.ext.toUpperCase()}</div>
+        `;
+        btn.onclick = () => {
+          document.querySelectorAll('.fmt-btn').forEach(b => b.classList.remove('selected'));
+          btn.classList.add('selected');
+          selectedFormat = f;
+          document.getElementById('dl-btn').disabled = false;
+        };
+        if (i === 0) {
+          selectedFormat = f;
+          document.getElementById('dl-btn').disabled = false;
+        }
+        grid.appendChild(btn);
+      });
+
+      document.getElementById('result-section').style.display = 'block';
+      document.getElementById('result-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    } catch (e) {
+      showError('কিছু একটা সমস্যা হয়েছে। আবার চেষ্টা করো।');
+      console.error(e);
+    } finally {
+      showLoader(false);
+      document.getElementById('fetch-btn').disabled = false;
+    }
+  }
+
+  function startDownload() {
+    if (!selectedFormat || !selectedFormat.url) return;
+
+    const btn = document.getElementById('dl-btn');
+    btn.disabled = true;
+    btn.textContent = '⏳ শুরু হচ্ছে...';
+
+    try {
+      const title = document.getElementById('vid-title').textContent || 'video';
+      const a = document.createElement('a');
+      a.href = selectedFormat.url;
+      a.download = `${title}.${selectedFormat.ext}`;
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } catch (e) {
+      showError('Download শুরু করতে পারছে না।');
+    } finally {
+      setTimeout(() => {
+        btn.disabled = false;
+        btn.textContent = '⬇ ডাউনলোড শুরু করো';
+      }, 2000);
+    }
+  }
+
+  document.getElementById('url-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') fetchInfo();
+  });
+</script>
+</body>
+</html>
